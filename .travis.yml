@@ -1,0 +1,15 @@
+sudo: false
+
+language: go
+go:
+  - 1.8.x
+  - tip
+
+before_install:
+  - go get -t -v ./...
+  - go get github.com/golang/lint/golint
+  - go get honnef.co/go/tools/cmd/megacheck
+
+script:
+  - make
+  - golint
