@@ -11,15 +11,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type GetToken struct {
-	Context int
+type metricHeader struct {
+	Metrics []pcpMetrics
 }
 
-type MetricHeader struct {
-	Metrics []PcpMetrics
-}
-
-type PcpMetrics struct {
+type pcpMetrics struct {
 	Name        string
 	Pmid        int64
 	Indom       int64
@@ -30,25 +26,19 @@ type PcpMetrics struct {
 	Type        string
 }
 
-type TimestampHeader struct {
-	Timestamp
-	Values []GetValues
+type timestampHeader struct {
+	Values []getValues
 }
 
-type Timestamp struct {
-	S  string
-	Us string
+type getValues struct {
+	Pmid         int64
+	Name         string
+	Seconds      string `json:"s"`
+	Microseconds string `json:"us"`
+	Instances    []instanceList
 }
 
-type GetValues struct {
-	Pmid      int64
-	Name      string
-	S         string
-	Us        string
-	Instances []InstanceList
-}
-
-type InstanceList struct {
+type instanceList struct {
 	Instance int64
 	Value    float64
 }
@@ -61,9 +51,14 @@ type pcpPmwebapiMetric struct {
 	Value       float64
 }
 
+type pcpPmwebapiSource struct {
+	pcpPmwebapiMetrics []pcpPmwebapiMetric
+}
+
 func init() {
 	Factories["pmwebapi"] = newPcpSource
 }
+
 func gaugeMetric(labels []string, labelvalues []string, name string, textHelp string, value float64) prometheus.Metric {
 	return prometheus.MustNewConstMetric(
 		prometheus.NewDesc(
@@ -78,79 +73,112 @@ func gaugeMetric(labels []string, labelvalues []string, name string, textHelp st
 	)
 }
 
-type pcpPmwebapiSource struct {
-	pcpPmwebapiMetrics []pcpPmwebapiMetric
-}
-
 func (p *pcpPmwebapiSource) Update(ch chan<- prometheus.Metric) error {
 	for _, metric := range p.pcpPmwebapiMetrics {
 		ch <- gaugeMetric(metric.Labels, metric.Labelvalues, metric.Name, metric.TextHelp, metric.Value)
 	}
 	return nil
 }
+
+func getRequest(url string) []byte {
+	getResponse, err := http.Get(url)
+	if err != nil {
+		log.Fatal("NewRequest: ", err)
+	}
+	defer getResponse.Body.Close()
+	getResponseBody, err := ioutil.ReadAll(getResponse.Body)
+	if err != nil {
+		log.Fatal("Unable to read HTTP response:", err)
+	}
+	return getResponseBody
+}
+
+func unmarshal(text []byte, t interface{}) {
+	err := json.Unmarshal(text, t)
+	if err != nil {
+		log.Fatal("New Request: ", err)
+	}
+}
+
+func typeLabel(units string, pcpType string, name string) string {
+	unit := ""
+	if units != "" {
+		unit = "_" + units
+	}
+	if strings.ToUpper(pcpType) == "COUNTER" {
+		name += unit + "_total"
+	} else {
+		name += unit
+	}
+	return name
+}
+
+func fixNaming(name string) string {
+	name = strings.ToLower(name)
+	switch {
+	case strings.Contains(name, "seconds"), strings.Contains(name, "milliseconds"), strings.Contains(name, "nanoseconds"):
+	case strings.Contains(name, "nanosec"):
+		name = strings.Replace(name, "nanosec", "nanoseconds", -1)
+	case strings.Contains(name, "millisec"):
+		name = strings.Replace(name, "millisec", "milliseconds", -1)
+	case strings.Contains(name, "count / sec"):
+		name = strings.Replace(name, "count / sec", "count_per_second", -1)
+	case strings.Contains(name, "sec"):
+		name = strings.Replace(name, "sec", "seconds", -1)
+	case strings.Contains(name, "mbyte"):
+		name = strings.Replace(name, "mbyte", "megabytes", -1)
+	case strings.Contains(name, "kbyte"):
+		name = strings.Replace(name, "kbyte", "kilobytes", -1)
+	case strings.Contains(name, "kilobytes"), strings.Contains(name, "megabytes"):
+	case strings.Contains(name, "bytes_byte"):
+		name = strings.Replace(name, "bytes_byte", "bytes", -1)
+	case strings.Contains(name, "bytes"):
+	case strings.Contains(name, "byte"):
+		name = strings.Replace(name, "byte", "bytes", -1)
+	case strings.Contains(name, "failcnt"):
+		name = strings.Replace(name, "failcnt", "failcount", -1)
+	}
+	return strings.Replace(name, ".", "_", -1)
+}
+
 func newPcpSource() (PcpSource, error) {
-
 	var p pcpPmwebapiSource
+	tokenBody := getRequest("http://localhost:44323/pmapi/context?hostname=localhost")
 
-	tokenResp, err := http.Get("http://localhost:44323/pmapi/context?hostname=localhost")
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
-	defer tokenResp.Body.Close()
-
-	tokenBody, _ := ioutil.ReadAll(tokenResp.Body)
 	tokenMap := make(map[string]float64)
-	err = json.Unmarshal([]byte(tokenBody), &tokenMap)
+	unmarshal([]byte(tokenBody), &tokenMap)
 
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
 	contextNumber := strconv.FormatFloat(tokenMap["context"], 'f', -1, 64)
+	getMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
 
-	initialMetricsUrl := ("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
-
-	getMetrics, err := http.Get(initialMetricsUrl)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
-	defer getMetrics.Body.Close()
-
-	getMetricsBody, _ := ioutil.ReadAll(getMetrics.Body)
-
-	metricHeaderVar := &MetricHeader{}
-	err = json.Unmarshal([]byte(getMetricsBody), metricHeaderVar)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
-
-	var finalMetricsUrl string
+	metricHeaderVar := &metricHeader{}
+	unmarshal([]byte(getMetricsBody), metricHeaderVar)
 
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
 			continue
 		}
+
 		pmidNumber := strconv.FormatInt(pcpMetrics.Pmid, 10)
-		finalMetricsUrl = ("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
+		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
-		getFinalMetrics, err := http.Get(finalMetricsUrl)
-		if err != nil {
-			log.Fatal("NewRequest: ", err)
-		}
-		defer getFinalMetrics.Body.Close()
+		timestampHeaderVar := &timestampHeader{}
+		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
 
-		getFinalMetricsBody, _ := ioutil.ReadAll(getFinalMetrics.Body)
-
-		timestampHeaderVar := &TimestampHeader{}
-		err = json.Unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
-		if err != nil {
-			log.Fatal("NewRequest: ", err)
-		}
+		pcpMetrics.Name = typeLabel(pcpMetrics.Units, pcpMetrics.Type, pcpMetrics.Name)
+		pcpMetrics.Name = fixNaming(pcpMetrics.Name)
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
+				labelNew := []string{}
+				labelValuesNew := []string{}
+				if instanceList.Instance != -1 {
+					labelNew = append(labelNew, "instance")
+					labelValuesNew = append(labelValuesNew, strconv.FormatInt(instanceList.Instance, 10))
+				}
 				metric := pcpPmwebapiMetric{
-					Labels:      []string{"instance"},
-					Labelvalues: []string{strconv.FormatInt(instanceList.Instance, 10)},
-					Name:        getValues.Name,
+					Labels:      labelNew,
+					Labelvalues: labelValuesNew,
+					Name:        pcpMetrics.Name,
 					TextHelp:    pcpMetrics.TextHelp,
 					Value:       instanceList.Value,
 				}
