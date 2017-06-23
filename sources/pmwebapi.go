@@ -36,16 +36,16 @@ type TimestampHeader struct {
 }
 
 type Timestamp struct {
-	S  string
-	Us string
+	Seconds      string `json:"s"`
+	Microseconds string `json:"us"`
 }
 
 type GetValues struct {
-	Pmid      int64
-	Name      string
-	S         string
-	Us        string
-	Instances []InstanceList
+	Pmid         int64
+	Name         string
+	Seconds      string `json:"s"`
+	Microseconds string `json:"us"`
+	Instances    []InstanceList
 }
 
 type InstanceList struct {
@@ -61,9 +61,14 @@ type pcpPmwebapiMetric struct {
 	Value       float64
 }
 
+type pcpPmwebapiSource struct {
+	pcpPmwebapiMetrics []pcpPmwebapiMetric
+}
+
 func init() {
 	Factories["pmwebapi"] = newPcpSource
 }
+
 func gaugeMetric(labels []string, labelvalues []string, name string, textHelp string, value float64) prometheus.Metric {
 	return prometheus.MustNewConstMetric(
 		prometheus.NewDesc(
@@ -76,10 +81,6 @@ func gaugeMetric(labels []string, labelvalues []string, name string, textHelp st
 		value,
 		labelvalues...,
 	)
-}
-
-type pcpPmwebapiSource struct {
-	pcpPmwebapiMetrics []pcpPmwebapiMetric
 }
 
 func (p *pcpPmwebapiSource) Update(ch chan<- prometheus.Metric) error {
@@ -96,14 +97,13 @@ func getRequest(url string) []byte {
 	}
 	defer getResponse.Body.Close()
 	getResponseBody, err := ioutil.ReadAll(getResponse.Body)
-	if err != nil{
+	if err != nil {
 		log.Fatal("Unable to read HTTP response:", err)
 	}
 	return getResponseBody
 }
 
 func newPcpSource() (PcpSource, error) {
-
 	var p pcpPmwebapiSource
 	tokenBody := getRequest("http://localhost:44323/pmapi/context?hostname=localhost")
 
