@@ -88,34 +88,34 @@ func (p *pcpPmwebapiSource) Update(ch chan<- prometheus.Metric) error {
 	}
 	return nil
 }
+
+func getRequest(url string) []byte {
+	getResponse, err := http.Get(url)
+	if err != nil {
+		log.Fatal("NewRequest: ", err)
+	}
+	defer getResponse.Body.Close()
+	getResponseBody, err := ioutil.ReadAll(getResponse.Body)
+	if err != nil{
+		log.Fatal("Unable to read HTTP response:", err)
+	}
+	return getResponseBody
+}
+
 func newPcpSource() (PcpSource, error) {
 
 	var p pcpPmwebapiSource
+	tokenBody := getRequest("http://localhost:44323/pmapi/context?hostname=localhost")
 
-	tokenResp, err := http.Get("http://localhost:44323/pmapi/context?hostname=localhost")
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
-	defer tokenResp.Body.Close()
-
-	tokenBody, _ := ioutil.ReadAll(tokenResp.Body)
 	tokenMap := make(map[string]float64)
-	err = json.Unmarshal([]byte(tokenBody), &tokenMap)
+	err := json.Unmarshal([]byte(tokenBody), &tokenMap)
 
 	if err != nil {
 		log.Fatal("NewRequest: ", err)
 	}
+
 	contextNumber := strconv.FormatFloat(tokenMap["context"], 'f', -1, 64)
-
-	initialMetricsUrl := ("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
-
-	getMetrics, err := http.Get(initialMetricsUrl)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
-	defer getMetrics.Body.Close()
-
-	getMetricsBody, _ := ioutil.ReadAll(getMetrics.Body)
+	getMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
 
 	metricHeaderVar := &MetricHeader{}
 	err = json.Unmarshal([]byte(getMetricsBody), metricHeaderVar)
@@ -123,22 +123,12 @@ func newPcpSource() (PcpSource, error) {
 		log.Fatal("NewRequest: ", err)
 	}
 
-	var finalMetricsUrl string
-
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
 			continue
 		}
 		pmidNumber := strconv.FormatInt(pcpMetrics.Pmid, 10)
-		finalMetricsUrl = ("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
-
-		getFinalMetrics, err := http.Get(finalMetricsUrl)
-		if err != nil {
-			log.Fatal("NewRequest: ", err)
-		}
-		defer getFinalMetrics.Body.Close()
-
-		getFinalMetricsBody, _ := ioutil.ReadAll(getFinalMetrics.Body)
+		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
 		timestampHeaderVar := &TimestampHeader{}
 		err = json.Unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
