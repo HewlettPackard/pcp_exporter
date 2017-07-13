@@ -127,6 +127,7 @@ func newPcpSource() (PcpSource, error) {
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
 			continue
 		}
+
 		pmidNumber := strconv.FormatInt(pcpMetrics.Pmid, 10)
 		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
@@ -135,11 +136,18 @@ func newPcpSource() (PcpSource, error) {
 		if err != nil {
 			log.Fatal("NewRequest: ", err)
 		}
+
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
+				labelNew := []string{}
+				labelValuesNew := []string{}
+				if instanceList.Instance != -1 {
+					labelNew = append(labelNew, "instance")
+					labelValuesNew = append(labelValuesNew, strconv.FormatInt(instanceList.Instance, 10))
+				}
 				metric := pcpPmwebapiMetric{
-					Labels:      []string{"instance"},
-					Labelvalues: []string{strconv.FormatInt(instanceList.Instance, 10)},
+					Labels:      labelNew,
+					Labelvalues: labelValuesNew,
 					Name:        getValues.Name,
 					TextHelp:    pcpMetrics.TextHelp,
 					Value:       instanceList.Value,
