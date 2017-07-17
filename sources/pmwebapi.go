@@ -103,25 +103,26 @@ func getRequest(url string) []byte {
 	return getResponseBody
 }
 
+func unmarshal(text []byte, t interface{}) {
+	err := json.Unmarshal(text, t)
+	if err != nil {
+		log.Fatal("New Request: ", err)
+	}
+}
+
 func newPcpSource() (PcpSource, error) {
 	var p pcpPmwebapiSource
 	tokenBody := getRequest("http://localhost:44323/pmapi/context?hostname=localhost")
 
 	tokenMap := make(map[string]float64)
-	err := json.Unmarshal([]byte(tokenBody), &tokenMap)
-
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
+	unmarshal([]byte(tokenBody), &tokenMap)
 
 	contextNumber := strconv.FormatFloat(tokenMap["context"], 'f', -1, 64)
 	getMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
 
 	metricHeaderVar := &MetricHeader{}
-	err = json.Unmarshal([]byte(getMetricsBody), metricHeaderVar)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
+	unmarshal([]byte(getMetricsBody), metricHeaderVar)
+
 
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
@@ -132,10 +133,7 @@ func newPcpSource() (PcpSource, error) {
 		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
 		timestampHeaderVar := &TimestampHeader{}
-		err = json.Unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
-		if err != nil {
-			log.Fatal("NewRequest: ", err)
-		}
+		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
 
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
