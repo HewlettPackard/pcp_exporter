@@ -110,6 +110,19 @@ func unmarshal(text []byte, t interface{}) {
 	}
 }
 
+func typeLabel(units string, pcpType string, name string) string {
+	unit := ""
+	if units != "" {
+		unit = "_" + units
+	}
+	if strings.ToUpper(pcpType) == "COUNTER" {
+		name += unit + "_total"
+	} else {
+		name += unit
+	}
+	return strings.Replace(name, ".", "_", -1)
+}
+
 func newPcpSource() (PcpSource, error) {
 	var p pcpPmwebapiSource
 	tokenBody := getRequest("http://localhost:44323/pmapi/context?hostname=localhost")
@@ -123,7 +136,6 @@ func newPcpSource() (PcpSource, error) {
 	metricHeaderVar := &MetricHeader{}
 	unmarshal([]byte(getMetricsBody), metricHeaderVar)
 
-
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
 			continue
@@ -135,16 +147,7 @@ func newPcpSource() (PcpSource, error) {
 		timestampHeaderVar := &TimestampHeader{}
 		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
 
-		unit := ""
-		if pcpMetrics.Units != "" {
-			unit = "_" + pcpMetrics.Units
-		}
-		if strings.ToUpper(pcpMetrics.Type) == "COUNTER" {
-			pcpMetrics.Name += unit + "_total"
-		} else {
-			pcpMetrics.Name += unit
-		}
-		pcpMetrics.Name = strings.Replace(pcpMetrics.Name, ".", "_", -1)
+		pcpMetrics.Name = typeLabel(pcpMetrics.Units, pcpMetrics.Type, pcpMetrics.Name)
 
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
