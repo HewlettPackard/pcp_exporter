@@ -137,6 +137,17 @@ func newPcpSource() (PcpSource, error) {
 			log.Fatal("NewRequest: ", err)
 		}
 
+		unit := ""
+		if pcpMetrics.Units != "" {
+			unit = "_" + pcpMetrics.Units
+		}
+		if strings.ToUpper(pcpMetrics.Type) == "COUNTER" {
+			pcpMetrics.Name += unit + "_total"
+		} else {
+			pcpMetrics.Name += unit
+		}
+		pcpMetrics.Name = strings.Replace(pcpMetrics.Name, ".", "_", -1)
+
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
 				labelNew := []string{}
@@ -148,7 +159,7 @@ func newPcpSource() (PcpSource, error) {
 				metric := pcpPmwebapiMetric{
 					Labels:      labelNew,
 					Labelvalues: labelValuesNew,
-					Name:        getValues.Name,
+					Name:        pcpMetrics.Name,
 					TextHelp:    pcpMetrics.TextHelp,
 					Value:       instanceList.Value,
 				}
