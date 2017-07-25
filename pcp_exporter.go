@@ -27,7 +27,7 @@ var (
 	)
 )
 
-//pcpSource is a list of all sources that the user would like to collect.
+//PcpSource is a list of all sources that the user would like to collect.
 type PcpSource struct {
 	sourceList map[string]sources.PcpSource
 }

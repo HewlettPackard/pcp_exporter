@@ -11,15 +11,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type GetToken struct {
-	Context int
+type metricHeader struct {
+	Metrics []pcpMetrics
 }
 
-type MetricHeader struct {
-	Metrics []PcpMetrics
-}
-
-type PcpMetrics struct {
+type pcpMetrics struct {
 	Name        string
 	Pmid        int64
 	Indom       int64
@@ -30,25 +26,19 @@ type PcpMetrics struct {
 	Type        string
 }
 
-type TimestampHeader struct {
-	Timestamp
-	Values []GetValues
+type timestampHeader struct {
+	Values []getValues
 }
 
-type Timestamp struct {
-	Seconds      string `json:"s"`
-	Microseconds string `json:"us"`
-}
-
-type GetValues struct {
+type getValues struct {
 	Pmid         int64
 	Name         string
 	Seconds      string `json:"s"`
 	Microseconds string `json:"us"`
-	Instances    []InstanceList
+	Instances    []instanceList
 }
 
-type InstanceList struct {
+type instanceList struct {
 	Instance int64
 	Value    float64
 }
@@ -133,7 +123,7 @@ func newPcpSource() (PcpSource, error) {
 	contextNumber := strconv.FormatFloat(tokenMap["context"], 'f', -1, 64)
 	getMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_metric")
 
-	metricHeaderVar := &MetricHeader{}
+	metricHeaderVar := &metricHeader{}
 	unmarshal([]byte(getMetricsBody), metricHeaderVar)
 
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
@@ -144,7 +134,7 @@ func newPcpSource() (PcpSource, error) {
 		pmidNumber := strconv.FormatInt(pcpMetrics.Pmid, 10)
 		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
-		timestampHeaderVar := &TimestampHeader{}
+		timestampHeaderVar := &timestampHeader{}
 		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
 
 		pcpMetrics.Name = typeLabel(pcpMetrics.Units, pcpMetrics.Type, pcpMetrics.Name)
