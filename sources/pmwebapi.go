@@ -110,6 +110,7 @@ func typeLabel(units string, pcpType string, name string) string {
 	} else {
 		name += unit
 	}
+	name = strings.Replace(name, "count / sec", "count_per_second", -1)
 	return strings.Replace(name, ".", "_", -1)
 }
 
