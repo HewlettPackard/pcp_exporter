@@ -126,20 +126,22 @@ func newPcpSource() (PcpSource, error) {
 
 	metricHeaderVar := &metricHeader{}
 	unmarshal([]byte(getMetricsBody), metricHeaderVar)
-
+	//initial loop through metrics
 	for _, pcpMetrics := range metricHeaderVar.Metrics {
+		//ignoring types of string, use type as part of label?
 		if strings.ToUpper(pcpMetrics.Type) == "STRING" {
 			continue
 		}
-
+		//check if string then continue: change this to keep these
+		//converting pmid to int
 		pmidNumber := strconv.FormatInt(pcpMetrics.Pmid, 10)
 		getFinalMetricsBody := getRequest("http://localhost:44323/pmapi/" + contextNumber + "/_fetch?pmids=" + pmidNumber)
 
 		timestampHeaderVar := &timestampHeader{}
 		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
-
+		//string together units type and name to creat pcp name
 		pcpMetrics.Name = typeLabel(pcpMetrics.Units, pcpMetrics.Type, pcpMetrics.Name)
-
+		//second loop to get all the values and third loop to gain instance list with all instances
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
 				labelNew := []string{}
@@ -161,3 +163,4 @@ func newPcpSource() (PcpSource, error) {
 	}
 	return &p, nil
 }
+
