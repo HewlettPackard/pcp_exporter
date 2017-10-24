@@ -110,7 +110,34 @@ func typeLabel(units string, pcpType string, name string) string {
 	} else {
 		name += unit
 	}
-	name = strings.Replace(name, "count / sec", "count_per_second", -1)
+	return name
+}
+
+func fixNaming(name string) string {
+	name = strings.ToLower(name)
+	switch {
+	case strings.Contains(name, "seconds"), strings.Contains(name, "milliseconds"), strings.Contains(name, "nanoseconds"):
+	case strings.Contains(name, "nanosec"):
+		name = strings.Replace(name, "nanosec", "nanoseconds", -1)
+	case strings.Contains(name, "millisec"):
+		name = strings.Replace(name, "millisec", "milliseconds", -1)
+	case strings.Contains(name, "count / sec"):
+		name = strings.Replace(name, "count / sec", "count_per_second", -1)
+	case strings.Contains(name, "sec"):
+		name = strings.Replace(name, "sec", "seconds", -1)
+	case strings.Contains(name, "mbyte"):
+		name = strings.Replace(name, "mbyte", "megabytes", -1)
+	case strings.Contains(name, "kbyte"):
+		name = strings.Replace(name, "kbyte", "kilobytes", -1)
+	case strings.Contains(name, "kilobytes"), strings.Contains(name, "megabytes"):
+	case strings.Contains(name, "bytes_byte"):
+		name = strings.Replace(name, "bytes_byte", "bytes", -1)
+	case strings.Contains(name, "bytes"):
+	case strings.Contains(name, "byte"):
+		name = strings.Replace(name, "byte", "bytes", -1)
+	case strings.Contains(name, "failcnt"):
+		name = strings.Replace(name, "failcnt", "failcount", -1)
+	}
 	return strings.Replace(name, ".", "_", -1)
 }
 
@@ -139,7 +166,7 @@ func newPcpSource() (PcpSource, error) {
 		unmarshal([]byte(getFinalMetricsBody), timestampHeaderVar)
 
 		pcpMetrics.Name = typeLabel(pcpMetrics.Units, pcpMetrics.Type, pcpMetrics.Name)
-
+		pcpMetrics.Name = fixNaming(pcpMetrics.Name)
 		for _, getValues := range timestampHeaderVar.Values {
 			for _, instanceList := range getValues.Instances {
 				labelNew := []string{}
