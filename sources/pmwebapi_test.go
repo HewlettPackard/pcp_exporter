@@ -84,6 +84,11 @@ func TestWeirdMetrics(t *testing.T) {
 	name["kal_byte"] = "kal_bytes"
 	name["gorgi_nanosec"] = "gorgi_nanoseconds"
 	name["asfdasfr_Mbyte"] = "asfdasfr_megabytes"
+	name["pcp_network_interface_baudrate_byte / seconds"] = "pcp_network_interface_baudrate_bytes_per_second"
+	name["pcp_network_interface_speed_mbyte / seconds"] = "pcp_network_interface_speed_megabytes_per_second"
+	name["pcp_pmcd_cputime_per_pdu_in_microseconds / count"] = "pcp_pmcd_cputime_per_pdu_in_microseconds_per_count"
+	name["something_unexpected / unit"] = "something_unexpected_per_unit"
+	name["another_unexpected/unit"] = "another_unexpected_per_unit"
 
 	for key, val := range name {
 		converted := fixNaming(key)
