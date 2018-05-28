@@ -102,7 +102,10 @@ func unmarshal(text []byte, t interface{}) {
 
 func typeLabel(units string, pcpType string, name string) string {
 	unit := ""
-	if units != "" {
+	switch {
+	case strings.HasPrefix(units, "/ "):
+		unit = strings.Replace(units, "/ ", "_", 1)
+	case units != "":
 		unit = "_" + units
 	}
 	if strings.ToUpper(pcpType) == "COUNTER" {
@@ -116,12 +119,6 @@ func typeLabel(units string, pcpType string, name string) string {
 func fixNaming(name string) string {
 	name = strings.ToLower(name)
 	switch {
-	case strings.Contains(name, "seconds / count"):
-		name = strings.Replace(name, "seconds / count", "seconds_per_count", -1)
-	case strings.Contains(name, "mbyte / seconds"):
-		name = strings.Replace(name, "mbyte / seconds", "megabytes_per_second", -1)
-	case strings.Contains(name, "byte / seconds"):
-		name = strings.Replace(name, "byte / seconds", "bytes_per_second", -1)
 	case strings.Contains(name, "seconds"), strings.Contains(name, "milliseconds"), strings.Contains(name, "nanoseconds"):
 	case strings.Contains(name, "nanosec"):
 		name = strings.Replace(name, "nanosec", "nanoseconds", -1)
@@ -147,6 +144,14 @@ func fixNaming(name string) string {
 		name = strings.Replace(name, " / ", "_per_", -1)
 	case strings.Contains(name, "/"):
 		name = strings.Replace(name, "/", "_per_", -1)
+	}
+	switch {
+	case strings.Contains(name, "seconds / count"):
+		name = strings.Replace(name, "seconds / count", "seconds_per_count", -1)
+	case strings.Contains(name, "mbyte / seconds"):
+		name = strings.Replace(name, "mbyte / seconds", "megabytes_per_second", -1)
+	case strings.Contains(name, "byte / seconds"):
+		name = strings.Replace(name, "byte / seconds", "bytes_per_second", -1)
 	}
 	return strings.Replace(name, ".", "_", -1)
 }
