@@ -87,6 +87,9 @@ func TestWeirdMetrics(t *testing.T) {
 	name["pcp_network_interface_baudrate_byte / seconds"] = "pcp_network_interface_baudrate_bytes_per_second"
 	name["pcp_network_interface_speed_mbyte / seconds"] = "pcp_network_interface_speed_megabytes_per_second"
 	name["pcp_pmcd_cputime_per_pdu_in_microseconds / count"] = "pcp_pmcd_cputime_per_pdu_in_microseconds_per_count"
+	name["pcp_network_interface_baudrate_byte / sec"] = "pcp_network_interface_baudrate_bytes_per_second"
+	name["pcp_network_interface_speed_mbyte / sec"] = "pcp_network_interface_speed_megabytes_per_second"
+	name["pcp_pmcd_cputime_per_pdu_in_microsec / count"] = "pcp_pmcd_cputime_per_pdu_in_microseconds_per_count"
 	name["something_unexpected / unit"] = "something_unexpected_per_unit"
 	name["another_unexpected/unit"] = "another_unexpected_per_unit"
 
@@ -105,6 +108,8 @@ func TestLabelTypes(t *testing.T) {
 		{"", "", "", ""},
 		{"kal", "CoUnTeR", "kal", "kal_kal_total"},
 		{"tery", "gagage", "kall", "kall_tery"},
+		{"/ tery", "gagage", "kall", "kall_tery"},
+		{"/ kal", "CoUnTeR", "kal", "kal_kal_total"},
 	}
 
 	for _, element := range arr {
