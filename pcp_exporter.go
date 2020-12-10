@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HewlettPackard/pcp_exporter/sources"
+	"./sources"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -67,6 +68,13 @@ func collectFromSource(name string, s sources.PcpSource, ch chan<- prometheus.Me
 
 func loadSources(list []string) (map[string]sources.PcpSource, error) {
 	sourceList := map[string]sources.PcpSource{}
+
+	factoriesCount := len(sources.Factories)
+	log.Infoln("Factories Count", factoriesCount)
+	for f := range sources.Factories {
+		log.Infoln("Factory:", f)
+	}
+
 	for _, name := range list {
 		fn, ok := sources.Factories[name]
 		if !ok {
@@ -102,7 +110,7 @@ func main() {
 	log.Infoln("Build context", version.BuildContext())
 
 	//expand to include more sources eventually (CLI, other?)
-	enabledSources := []string{"pmwebapi"}
+	enabledSources := []string{"pcp-direct"}
 
 	sourceList, err := loadSources(enabledSources)
 	if err != nil {

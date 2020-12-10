@@ -1,9 +1,9 @@
-module ghthub.com/oracle/pcp-exporter
+module github.com/oracle/pcp-exporter
 
 go 1.15
 
 require (
-	github.com/HewlettPackard/pcp_exporter v0.0.0-20180725223329-e6309d0c2c91
+	github.com/TroyWilsonAus/pcp_exporter v0.0.0-20180725223329-e6309d0c2c91
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/prometheus/client_golang v0.9.2
