@@ -1,4 +1,4 @@
-package sources
+package pcpdirect
 
 import (
 	"encoding/json"
@@ -56,6 +56,7 @@ type pcpPmwebapiSource struct {
 }
 
 func init() {
+	log.Debugf("OK: %q source succeeded after %f seconds: %s", name, duration.Seconds(), err)
 	Factories["pcp-direct"] = newPcpSource
 }
 

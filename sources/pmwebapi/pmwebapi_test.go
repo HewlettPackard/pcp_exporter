@@ -1,4 +1,4 @@
-package sources
+package pmwebapi
 
 import (
 	"encoding/json"

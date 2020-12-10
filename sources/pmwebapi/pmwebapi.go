@@ -1,4 +1,4 @@
-package sources
+package pmwebapi
 
 import (
 	"encoding/json"
@@ -56,6 +56,7 @@ type pcpPmwebapiSource struct {
 }
 
 func init() {
+	log.Debugf("Init: pmwebapi")
 	Factories["pmwebapi"] = newPcpSource
 }
 

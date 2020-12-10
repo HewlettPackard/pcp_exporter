@@ -1,4 +1,4 @@
-module github.com/oracle/pcp-exporter
+module github.com/TroyWilsonAus/pcp-exporter
 
 go 1.15
 
