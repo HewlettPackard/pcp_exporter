@@ -1,0 +1,24 @@
+package mainold
+
+import (
+	"fmt"
+
+	"github.com/performancecopilot/pcp-go/pmapi"
+)
+
+func main() {
+	context, _ := pmapi.PmNewContext(pmapi.PmContextHost, "localhost")
+
+	hostname, _ := context.PmGetContextHostname()
+	pmIDS, _ := context.PmLookupName("disk.dev.read", "disk.dev.write")
+	pmValue, _ := context.PmFetch(pmIDS[0])
+	lastValuePos := len(pmValue.VSet) - 1
+
+	fmt.Println(hostname)
+	fmt.Println(pmIDS)
+
+	fmt.Println(pmValue)
+	fmt.Println(pmValue.VSet)
+	fmt.Println(pmValue.VSet[lastValuePos])
+	fmt.Println(pmValue.VSet[0])
+}
